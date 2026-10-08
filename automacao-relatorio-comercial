@@ -1,0 +1,66 @@
+import pandas as pd
+from datetime import datetime
+
+def limpar_e_analisar_vendas(caminho_arquivo_bruto):
+    print("=== Iniciando o Processamento do Relatório Comercial ===")
+    
+    # 1. Carregar os dados brutos (simulando a extração do CRM)
+    try:
+        df = pd.read_csv(caminho_arquivo_bruto)
+    except FileNotFoundError:
+        # Criando dados fictícios para teste caso o arquivo não exista
+        dados_teste = {
+            'Data': ['2026-10-01 ', ' 2026-10-02', '2026-10-02', '2026-10-03'],
+            'Cliente': [' Loja Alfa  ', 'Loja Beta', 'Loja Gama', 'Loja Alfa'],
+            'Produto': ['Licença Software A', 'Mentoria TI', 'Licença Software A', 'Consultoria'],
+            'Quantidade':,
+            'Preço Unitário': [150.00, 1200.00, 150.00, 500.00],
+            'Status': ['Concluída', 'Cancelada', 'Concluída', 'Concluída']
+        }
+        df = pd.DataFrame(dados_teste)
+        print("💡 Arquivo bruto não encontrado. Gerando base de testes automática...")
+
+    # 2. Limpeza de Dados (Data Cleaning)
+    # Remover espaços em branco invisíveis nos textos
+    df['Cliente'] = df['Cliente'].str.strip()
+    df['Status'] = df['Status'].str.strip()
+    
+    # Padronizar o formato das datas
+    df['Data'] = pd.to_datetime(df['Data'].str.strip()).dt.strftime('%d/%m/%Y')
+
+    # 3. Regra de Negócio: Filtrar apenas vendas válidas (remover canceladas)
+    df_validas = df[df['Status'] == 'Concluída'].copy()
+
+    # 4. Processamento Analítico: Calcular o Faturamento Total por linha
+    df_validas['Faturamento Total'] = df_validas['Quantidade'] * df_validas['Preço Unitário']
+
+    # 5. Geração de Indicadores para Tomada de Decisão
+    faturamento_total_periodo = df_validas['Faturamento Total'].sum()
+    ticket_medio = df_validas['Faturamento Total'].mean()
+    melhor_cliente = df_validas.groupby('Cliente')['Faturamento Total'].sum().idxmax()
+    
+    print("\n📊 --- INDICADORES COMERCIAIS GERADOS ---")
+    print(f"💰 Faturamento Total Líquido: R$ {faturamento_total_periodo:,.2f}")
+    print(f"📈 Ticket Médio por Venda: R$ {ticket_medio:,.2f}")
+    print(f"🏆 Principal Cliente do Período: {melhor_cliente}")
+    print("-----------------------------------------\n")
+
+    # 6. Exportar Relatório Limpo e Formatado
+    arquivo_saida = "relatorio_comercial_limpo.xlsx"
+    
+    # Criar um arquivo Excel com duas abas: uma com os dados limpos e outra com o resumo
+    with pd.ExcelWriter(arquivo_saida, engine='openpyxl') as writer:
+        df_validas.to_excel(writer, sheet_name='Dados de Vendas', index=False)
+        
+        # Criando uma aba de resumo executivo
+        resumo_dados = {
+            'Métrica': ['Faturamento Total', 'Ticket Médio', 'Melhor Cliente'],
+            'Valor': [faturamento_total_periodo, ticket_medio, melhor_cliente]
+        }
+        pd.DataFrame(resumo_dados).to_excel(writer, sheet_name='Resumo Executivo', index=False)
+
+    print(f"✅ Sucesso! Relatório gerado e salvo como: '{arquivo_saida}'")
+
+# Executar a função
+if __name__ == "__main__":
+    limpar_e_analisar_vendas("vendas_crm_bruto.csv")
